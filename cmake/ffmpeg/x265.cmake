@@ -32,6 +32,14 @@ set(CMAKE_INSTALL_PREFIX ${FFMPEG_INSTALL_PREFIX})
 
 # build x265
 add_subdirectory(${X265_GENERATED_SRC_PATH}/source x265 SYSTEM)
+
+# Ubuntu's GCC can emit glibc vector-math ABI calls from x265's fast-math C++
+# code. Those symbols are unavailable on RHEL 9 even though the archive is
+# otherwise portable. x265's architecture-specific assembly remains enabled.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(x265-static PRIVATE -fno-tree-vectorize)
+endif()
+
 add_dependencies(${CMAKE_PROJECT_NAME} x265-static)
 
 # install x265 as a build target, this must be installed before building FFmpeg
