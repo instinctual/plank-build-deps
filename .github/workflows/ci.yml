@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - master
+      - stationconnect/main
   workflow_dispatch:
 
 concurrency:
