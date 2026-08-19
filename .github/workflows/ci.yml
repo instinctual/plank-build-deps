@@ -596,6 +596,19 @@ jobs:
           cd "$GITHUB_WORKSPACE"
           ${{ env.MAKE_CMD }} -C build install
 
+      - name: Validate StationConnect Linux ABI
+        if: matrix.name == 'Linux-x86_64'
+        shell: bash
+        run: |
+          set -e
+          nvenc_header=./build/dist/ffmpeg/include/ffnvcodec/nvEncodeAPI.h
+          grep -Eq '^#define NVENCAPI_MAJOR_VERSION +13$' "$nvenc_header"
+          grep -Eq '^#define NVENCAPI_MINOR_VERSION +0$' "$nvenc_header"
+          if nm -u ./build/dist/ffmpeg/lib/libx265.a | grep -Eq '_ZGV.*log2'; then
+            echo 'x265 requires an unsupported glibc vector-math ABI' >&2
+            exit 1
+          fi
+
       - name: Sync FreeBSD build output to host
         if: startsWith(matrix.shell, 'freebsd')
         shell: bash

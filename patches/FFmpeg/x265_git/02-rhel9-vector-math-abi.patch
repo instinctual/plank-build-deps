@@ -1,0 +1,17 @@
+diff --git a/source/CMakeLists.txt b/source/CMakeLists.txt
+index 5a94ac804..1e6b8ca25 100755
+--- a/source/CMakeLists.txt
++++ b/source/CMakeLists.txt
+@@ -454,6 +454,12 @@ if(GCC)
+     check_cxx_compiler_flag(-ffast-math CC_HAS_FAST_MATH) 
+     if (CC_HAS_FAST_MATH)
+         add_definitions(-ffast-math)
++        # Do not emit glibc vector-math ABI calls that are unavailable on
++        # supported RHEL 9 hosts. Architecture-specific x265 assembly remains
++        # enabled, so this only disables GCC's automatic tree vectorizer.
++        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
++            add_definitions(-fno-tree-vectorize)
++        endif()
+     endif()
+     if (NOT (ARM64 OR CROSS_COMPILE_ARM64))
+         check_cxx_compiler_flag(-mstackrealign CC_HAS_STACK_REALIGN)
