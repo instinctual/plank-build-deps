@@ -95,7 +95,7 @@ endif()
 if(BUILD_FFMPEG_X264)
     list(APPEND FFMPEG_EXTRA_CONFIGURE
             --enable-libx264
-            --enable-encoder=libx264
+            --enable-encoder=libx264,libx264rgb
     )
 endif()
 if(BUILD_FFMPEG_X265)
