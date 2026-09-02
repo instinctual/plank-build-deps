@@ -15,8 +15,23 @@ macro(APPLY_GIT_PATCH repo_path patch_path)
                 RESULT_VARIABLE SUCCESS
                 COMMAND_ECHO STDOUT)
 
-        if(${SUCCESS} EQUAL 1)
+        if(NOT ${SUCCESS} EQUAL 0)
             message(FATAL_ERROR "\n::error:: failed to apply the patch: ${patch_path}\n")
+        endif()
+    else()
+        # A reused generated source tree may already contain the patch. Prove
+        # that state by checking whether it reverses cleanly. Any other failure
+        # is a real source/patch mismatch and must not be silently ignored.
+        execute_process(COMMAND git apply -v --ignore-whitespace --reverse --check ${patch_path}
+                WORKING_DIRECTORY ${repo_path}
+                RESULT_VARIABLE REVERSE_SUCCESS
+                COMMAND_ECHO STDOUT)
+
+        if(${REVERSE_SUCCESS} EQUAL 0)
+            message("Git patch ${patch_path} is already applied in ${repo_path} repository")
+        else()
+            message(FATAL_ERROR
+                    "\n::error:: patch is neither applicable nor already applied: ${patch_path}\n")
         endif()
     endif()
 endmacro()
