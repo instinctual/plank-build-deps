@@ -1,0 +1,26 @@
+# GitHub reads this on master; PLANK consumes plank/main.
+# Keep the same policy on both branches, without advancing inherited master pins.
+version: 2
+updates:
+  - package-ecosystem: gitsubmodule
+    directory: /
+    target-branch: plank/main
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    allow:
+      - dependency-name: third-party/FFmpeg/AMF
+      - dependency-name: third-party/FFmpeg/FFmpeg
+      - dependency-name: third-party/FFmpeg/nv-codec-headers
+      - dependency-name: third-party/FFmpeg/x264
+      - dependency-name: third-party/FFmpeg/x265_git
+      - dependency-name: third-party/FFmpeg/Vulkan-Headers
+      - dependency-name: third-party/FFmpeg/Vulkan-Loader
+    groups:
+      vulkan:
+        patterns:
+          - third-party/FFmpeg/Vulkan-Headers
+          - third-party/FFmpeg/Vulkan-Loader
+    commit-message:
+      prefix: deps
