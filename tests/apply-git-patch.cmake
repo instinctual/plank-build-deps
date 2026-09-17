@@ -1,0 +1,42 @@
+cmake_minimum_required(VERSION 3.25)
+
+# Run with: cmake -P tests/apply-git-patch.cmake
+# The child mode is needed to assert that a fatal patch mismatch fails CMake.
+include("${CMAKE_CURRENT_LIST_DIR}/../cmake/apply_git_patch.cmake")
+if(DEFINED FIXTURE)
+    APPLY_GIT_PATCH("${FIXTURE}" "${FIXTURE}/change.patch")
+    return()
+endif()
+
+string(RANDOM LENGTH 12 ALPHABET 0123456789abcdef fixture_id)
+set(fixture "${CMAKE_CURRENT_BINARY_DIR}/patch-test-${fixture_id}")
+file(MAKE_DIRECTORY "${fixture}")
+execute_process(COMMAND git init --quiet "${fixture}" COMMAND_ERROR_IS_FATAL ANY)
+file(WRITE "${fixture}/value.txt" "before\n")
+file(WRITE "${fixture}/change.patch"
+    "diff --git a/value.txt b/value.txt\n--- a/value.txt\n+++ b/value.txt\n@@ -1 +1 @@\n-before\n+after\n")
+
+foreach(case IN ITEMS fresh already-applied mismatched)
+    if(case STREQUAL "mismatched")
+        file(WRITE "${fixture}/value.txt" "incompatible\n")
+    endif()
+    execute_process(COMMAND "${CMAKE_COMMAND}" "-DFIXTURE=${fixture}" -P "${CMAKE_CURRENT_LIST_FILE}"
+        RESULT_VARIABLE result OUTPUT_VARIABLE output ERROR_VARIABLE output)
+    if(case STREQUAL "mismatched")
+        if("${result}" STREQUAL "0" OR NOT output MATCHES "neither applicable nor already applied")
+            message(FATAL_ERROR "Mismatched patch was not rejected: ${output}")
+        endif()
+        set(expected "incompatible\n")
+    else()
+        if(NOT "${result}" STREQUAL "0")
+            message(FATAL_ERROR "${case} patch failed: ${output}")
+        endif()
+        set(expected "after\n")
+    endif()
+    file(READ "${fixture}/value.txt" actual)
+    if(NOT actual STREQUAL expected)
+        message(FATAL_ERROR "${case} patch produced unexpected file contents")
+    endif()
+    message(STATUS "${case}: passed")
+endforeach()
+file(REMOVE_RECURSE "${fixture}")

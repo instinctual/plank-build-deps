@@ -1,0 +1,93 @@
+diff --git a/tests/loader_alloc_callback_tests.cpp b/tests/loader_alloc_callback_tests.cpp
+index f006e9a..f1457fe 100644
+--- a/tests/loader_alloc_callback_tests.cpp
++++ b/tests/loader_alloc_callback_tests.cpp
+@@ -177,6 +177,19 @@ class MemoryTracker {
+ 
+     bool empty() noexcept { return allocation_count == 0; }
+ 
++    size_t live_allocation_count() noexcept { return allocation_count; }
++
++    void arm_allocation_failure_after(size_t skip_count) noexcept {
++        std::lock_guard<std::mutex> lg(main_mutex);
++        settings.should_fail_after_set_number_of_calls = true;
++        settings.fail_after_calls = call_count + skip_count;
++    }
++
++    void clear_allocation_failure() noexcept {
++        std::lock_guard<std::mutex> lg(main_mutex);
++        settings.should_fail_after_set_number_of_calls = false;
++    }
++
+     // Arm a single failure for the next reallocation that grows an existing block. Used to force the used-object
+     // list resize inside loader_get_next_available_entry to fail without disturbing prior allocations.
+     void arm_next_growing_reallocation_failure() noexcept {
+@@ -277,6 +290,68 @@ TEST(Allocation, EnumeratePhysicalDevices) {
+     ASSERT_TRUE(tracker.empty());
+ }
+ 
++// Fail each of the device/vendor/driver filter allocations in both count-only and
++// output-array calls. Earlier filters must be freed and a later call must still work.
++class IdFilterAllocationFailure : public testing::TestWithParam<std::tuple<bool, uint32_t, bool>> {};
++
++TEST_P(IdFilterAllocationFailure, ReturnsOutOfHostMemoryAndCleansUp) {
++    const auto [enumerate_groups, filter_index, return_handles] = GetParam();
++    FrameworkEnvironment env{};
++    auto& driver = env.add_icd(TEST_ICD_PATH_VERSION_2, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1))
++                       .set_min_icd_interface_version(5)
++                       .set_icd_api_version(VK_API_VERSION_1_1)
++                       .add_instance_extension({VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME});
++    auto& device = driver.add_and_get_physical_device("physical_device_0");
++    device.properties.apiVersion = VK_API_VERSION_1_1;
++    device.properties.deviceID = 0x1001;
++    device.properties.vendorID = 0x2001;
++    device.driver_properties.driverID = VK_DRIVER_ID_NVIDIA_PROPRIETARY;
++    driver.physical_device_groups.push_back(PhysicalDeviceGroup({0}));
++
++    MemoryTracker tracker;
++    {
++        InstWrapper inst{env.vulkan_functions, tracker.get()};
++        inst.create_info.set_api_version(VK_API_VERSION_1_1);
++        ASSERT_NO_FATAL_FAILURE(inst.CheckCreate());
++
++        uint32_t count = 1;
++        VkPhysicalDevice handle = VK_NULL_HANDLE;
++        VkPhysicalDeviceGroupProperties group{};
++        group.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_GROUP_PROPERTIES;
++        auto enumerate = [&]() {
++            count = 1;
++            if (enumerate_groups) {
++                return inst->vkEnumeratePhysicalDeviceGroups(inst, &count, return_handles ? &group : nullptr);
++            }
++            return inst->vkEnumeratePhysicalDevices(inst, &count, return_handles ? &handle : nullptr);
++        };
++
++        // Warm up the ICD/loader caches before arming the allocation failure.
++        ASSERT_EQ(VK_SUCCESS, enumerate());
++        ASSERT_EQ(1U, count);
++        env.env_var_vk_loader_device_id_filter.set_new_value("0x1001");
++        env.env_var_vk_loader_vendor_id_filter.set_new_value("0x2001");
++        env.env_var_vk_loader_driver_id_filter.set_new_value(std::to_string(VK_DRIVER_ID_NVIDIA_PROPRIETARY));
++        const size_t live_allocations = tracker.live_allocation_count();
++#if defined(_WIN32)
++        // Windows also allocates a UTF-8 environment string before each filter.
++        tracker.arm_allocation_failure_after(2 * filter_index + 1);
++#else
++        tracker.arm_allocation_failure_after(filter_index);
++#endif
++        EXPECT_EQ(VK_ERROR_OUT_OF_HOST_MEMORY, enumerate());
++        EXPECT_EQ(live_allocations, tracker.live_allocation_count());
++        tracker.clear_allocation_failure();
++        ASSERT_EQ(VK_SUCCESS, enumerate());
++        ASSERT_EQ(1U, count);
++    }
++    EXPECT_TRUE(tracker.empty());
++}
++
++INSTANTIATE_TEST_SUITE_P(Allocation, IdFilterAllocationFailure,
++                        testing::Combine(testing::Values(false, true), testing::Values(0U, 1U, 2U),
++                                         testing::Values(false, true)));
++
+ // Test making sure the allocation functions are called to allocate and cleanup everything from
+ // vkCreateInstance, to vkCreateDevice, and then through their destructors.  With special
+ // allocators used on both the instance and device.

@@ -20,6 +20,10 @@ add_dependencies(${CMAKE_PROJECT_NAME} vulkan-headers)
 # Vulkan Loader
 set(VULKAN_LOADER_GENERATED_SRC_PATH ${CMAKE_CURRENT_BINARY_DIR}/FFmpeg/Vulkan-Loader)
 
+# This loader correctness fix is required even when optional FFmpeg patches are disabled.
+APPLY_GIT_PATCH("${VULKAN_LOADER_GENERATED_SRC_PATH}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/patches/FFmpeg/Vulkan-Loader/01-handle-id-filter-allocation-failure.patch")
+
 # Configure options for Vulkan-Loader
 set(VULKAN_LOADER_CMAKE_ARGS
         -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/vulkan
