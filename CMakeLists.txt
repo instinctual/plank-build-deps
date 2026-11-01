@@ -27,8 +27,6 @@ option(BUILD_FFMPEG_LIBVA "Build FFmpeg with libva support" ON)
 option(BUILD_FFMPEG_LIBVA_PATCHES "Apply FFmpeg libva patches" ON)
 option(BUILD_FFMPEG_X264 "Build FFmpeg x264" ON)
 option(BUILD_FFMPEG_X264_PATCHES "Apply FFmpeg x264 patches" ON)
-option(BUILD_FFMPEG_X265 "Build FFmpeg x265" ON)
-option(BUILD_FFMPEG_X265_PATCHES "Apply FFmpeg x265 patches" ON)
 option(BUILD_FFMPEG_VULKAN "Build FFmpeg with Vulkan video encoding support" ON)
 option(BUILD_FFMPEG_VULKAN_PATCHES "Apply FFmpeg Vulkan patches" ON)
 

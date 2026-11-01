@@ -98,12 +98,6 @@ if(BUILD_FFMPEG_X264)
             --enable-encoder=libx264,libx264rgb
     )
 endif()
-if(BUILD_FFMPEG_X265)
-    list(APPEND FFMPEG_EXTRA_CONFIGURE
-            --enable-libx265
-            --enable-encoder=libx265
-    )
-endif()
 
 # OS specific options not defined by the above BUILD_FFMPEG_* options
 if(WIN32)
@@ -181,9 +175,6 @@ if(BUILD_FFMPEG_VULKAN)
 endif()
 if(BUILD_FFMPEG_X264)
     add_dependencies(ffmpeg x264)
-endif()
-if(BUILD_FFMPEG_X265)
-    add_dependencies(ffmpeg x265)
 endif()
 add_dependencies(${CMAKE_PROJECT_NAME} ffmpeg)
 install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/FFmpeg/include/"

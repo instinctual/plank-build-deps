@@ -61,9 +61,6 @@ if(BUILD_FFMPEG_X264)
     include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ffmpeg/x264.cmake)
 endif()
 
-if(BUILD_FFMPEG_X265)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ffmpeg/x265.cmake)
-endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/ffmpeg/ffmpeg.cmake)
 
