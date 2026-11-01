@@ -14,7 +14,6 @@ updates:
       - dependency-name: third-party/FFmpeg/FFmpeg
       - dependency-name: third-party/FFmpeg/nv-codec-headers
       - dependency-name: third-party/FFmpeg/x264
-      - dependency-name: third-party/FFmpeg/x265_git
       - dependency-name: third-party/FFmpeg/Vulkan-Headers
       - dependency-name: third-party/FFmpeg/Vulkan-Loader
     groups:
