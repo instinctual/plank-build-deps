@@ -28,10 +28,10 @@ index f006e9a..f1457fe 100644
  
 +// Fail each of the device/vendor/driver filter allocations in both count-only and
 +// output-array calls. Earlier filters must be freed and a later call must still work.
-+class IdFilterAllocationFailure : public testing::TestWithParam<std::tuple<bool, uint32_t, bool>> {};
++class IdFilterAllocationFailure : public testing::TestWithParam<std::tuple<bool, uint32_t, bool, bool>> {};
 +
 +TEST_P(IdFilterAllocationFailure, ReturnsOutOfHostMemoryAndCleansUp) {
-+    const auto [enumerate_groups, filter_index, return_handles] = GetParam();
++    const auto [enumerate_groups, filter_index, return_handles, fail_array] = GetParam();
 +    FrameworkEnvironment env{};
 +    auto& driver = env.add_icd(TEST_ICD_PATH_VERSION_2, {}, ManifestICD{}.set_api_version(VK_API_VERSION_1_1))
 +                       .set_min_icd_interface_version(5)
@@ -70,10 +70,10 @@ index f006e9a..f1457fe 100644
 +        env.env_var_vk_loader_driver_id_filter.set_new_value(std::to_string(VK_DRIVER_ID_NVIDIA_PROPRIETARY));
 +        const size_t live_allocations = tracker.live_allocation_count();
 +#if defined(_WIN32)
-+        // Windows also allocates a UTF-8 environment string before each filter.
-+        tracker.arm_allocation_failure_after(2 * filter_index + 1);
++        // Windows also allocates a UTF-8 environment string before the parse buffer and filter array.
++        tracker.arm_allocation_failure_after(3 * filter_index + 1 + (fail_array ? 1 : 0));
 +#else
-+        tracker.arm_allocation_failure_after(filter_index);
++        tracker.arm_allocation_failure_after(2 * filter_index + (fail_array ? 1 : 0));
 +#endif
 +        EXPECT_EQ(VK_ERROR_OUT_OF_HOST_MEMORY, enumerate());
 +        EXPECT_EQ(live_allocations, tracker.live_allocation_count());
@@ -86,7 +86,7 @@ index f006e9a..f1457fe 100644
 +
 +INSTANTIATE_TEST_SUITE_P(Allocation, IdFilterAllocationFailure,
 +                        testing::Combine(testing::Values(false, true), testing::Values(0U, 1U, 2U),
-+                                         testing::Values(false, true)));
++                                         testing::Values(false, true), testing::Values(false, true)));
 +
  // Test making sure the allocation functions are called to allocate and cleanup everything from
  // vkCreateInstance, to vkCreateDevice, and then through their destructors.  With special
